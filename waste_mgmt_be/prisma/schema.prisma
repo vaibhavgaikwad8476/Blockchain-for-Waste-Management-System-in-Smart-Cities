@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String            @id @default(auto()) @map("_id") @db.ObjectId
+  email               String            @unique
+  name                String?
+  password            String
+  address             String?
+  locationCoordinates Float[] // long and lat
+  phoneNumber         String?
+  type                UserType
+  role                UserRole          @default(USER)
+  wasteCollections    WasteCollection[]
+  Notification        Notification[]
+
+  @@map("users")
+}
+
+enum UserType {
+  DOMESTIC
+  COMMERCIAL
+}
+
+model Vehicle {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  registrationNumber String            @unique
+  type               VehicleType
+  capacity           Float // Maximum capacity of the vehicle in kilograms or cubic meters
+  status             VehicleStatus     @default(AVAILABLE)
+  wasteCollections   WasteCollection[]
+
+  @@map("vehicles")
+}
+
+model WasteCollection {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  collectionDate DateTime
+  wasteType      WasteType        @relation(fields: [wasteTypeId], references: [id])
+  amount         Float
+  status         CollectionStatus @default(PENDING)
+  vehicleId      String?          @db.ObjectId
+  vehicle        Vehicle?         @relation(fields: [vehicleId], references: [id])
+  userId         String           @db.ObjectId
+  user           User             @relation(fields: [userId], references: [id])
+  wasteTypeId    String           @db.ObjectId
+
+  @@map("wastecollections")
+}
+
+model WasteType {
+  id                  String                @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  collections         WasteCollection[]
+  WasteDisposalRecord WasteDisposalRecord[]
+
+  @@map("wastetypes")
+}
+
+model WasteDisposalRecord {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  wasteType      WasteType      @relation(fields: [wasteTypeId], references: [id])
+  weight         Float
+  disposalMethod DisposalMethod
+  date           DateTime
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  wasteTypeId    String         @db.ObjectId
+
+  @@map("wastedisposalrecords")
+}
+
+model Notification {
+  id        String             @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  message   String
+  userId    String             @db.ObjectId
+  user      User               @relation(fields: [userId], references: [id])
+  status    NotificationStatus @default(unread) // e.g., "unread", "read"
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("notifications") // Maps the model to the "notifications" table in your database
+}
+
+enum NotificationStatus {
+  read
+  unread
+}
+
+enum DisposalMethod {
+  RECYCLING
+  LANDFILL
+  COMPOSTING
+  INCINERATION
+}
+
+enum UserRole {
+  USER
+  WASTE_COLLECTOR
+  ADMIN
+}
+
+enum CollectionStatus {
+  PENDING
+  INPROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VehicleType {
+  TRUCK
+  VAN
+  BIKE
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  INACTIVE
+}
